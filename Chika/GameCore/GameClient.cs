@@ -12,8 +12,8 @@ namespace Chika.GameCore
 {
     public class GameClient
     {
-        private readonly string UDID = "84997e29-c34c-4c96-992f-e0ab1de38f86";
-        private static readonly string BASE_URL = "https://l3-prod-all-gs-gzlj.bilibiligame.net";
+        private string UDID = string.Empty;
+        private static readonly string BASE_URL = "https://le1-prod-all-gs-gzlj.bilibiligame.net";
 
         private RestClient _gameClient = new RestClient(BASE_URL);
 
@@ -28,8 +28,9 @@ namespace Chika.GameCore
         private Random rdm = new Random();
 
         public bool disable = false;
-        public GameClient(string gameVersion, Dictionary<string, object> account) : this(gameVersion)
+        public GameClient(string gameVersion, Dictionary<string, object> account, string udid) : this(gameVersion)
         {
+            UDID = udid;
             GameLogin(account);
             if (!disable)
             {
@@ -68,7 +69,8 @@ namespace Chika.GameCore
                     _gameClient.AddDefaultHeaders(new()
                     {
                         { "MANIFEST-VER", (string)statusResp.data.manifest_ver },
-                        { "RES-VER", (string)statusResp.data.res_ver }
+                        { "RES-VER", (string)statusResp.data.res_ver },
+                        { "EXCEL-VER", (string)statusResp.data.excel_ver }
                     });
                 }
                 else
@@ -112,16 +114,16 @@ namespace Chika.GameCore
                 { "BATTLE-LOGIC-VERSION", "3" },
                 { "BUNDLE-VER", "" },
                 { "CHANNEL-ID", "1000" },
-                { "DEVICE", "2" },
-                { "DEVICE-ID", "" },
+                { "DEVICE", "1" },
+                { "DEVICE-ID", UDID.ToUpper() },
                 { "DEVICE-NAME", "iPad8,9" },
                 { "GRAPHICS-DEVICE-NAME", "Apple A12Z GPU" },
                 { "IP-ADDRESS", "1.1.1.1" },
                 { "KEYCHAIN", "" },
                 { "LOCALE", "CN" },
-                { "PLATFORM", "1" },
+                { "PLATFORM", "1" }, 
                 { "PLATFORM-ID", "1" },
-                { "PLATFORM-OS-VERSION", "iPad OS 14.2 / ChikaBackend" },
+                { "PLATFORM-OS-VERSION", "iOS 14.3" },
                 { "REGION-CODE", "" },
                 { "X-Unity-Version", "2017.4.37c2" },
 
@@ -141,7 +143,15 @@ namespace Chika.GameCore
             {
                 var encResp = AddSignatureHeader(req, url, param);
                 req.AddParameter("", encResp, ParameterType.RequestBody);
-                var resp = MessagePackSerializer.Deserialize<dynamic>(CryptAES.DecryptRJ256Api(_gameClient.Execute(req).Content));
+                var exeReq = _gameClient.Execute(req);
+                if (!exeReq.IsSuccessful)
+                {
+                    //nginx error
+                    Thread.Sleep(500);
+                    //重新请求
+                    return DefaultRequest(url, param, encrypted);
+                }
+                var resp = MessagePackSerializer.Deserialize<dynamic>(CryptAES.DecryptRJ256Api(exeReq.Content));
                 if (resp["data_headers"]["result_code"] != 1 && url == "/tool/sdk_login")
                 {
                     disable = true;
@@ -188,6 +198,15 @@ namespace Chika.GameCore
                 _savedAccount = accountRequest;
             var viewerId = CryptAES.DecryptRJ256Api((string)_savedAccount["viewer_id"]);
             _savedAccount["viewer_id"] = Encoding.UTF8.GetString(CryptAES.EncryptRJ256Api(viewerId));
+
+            _savedAccount["captcha_code"] = "";
+            _savedAccount["captcha_type"] = "";
+            _savedAccount["challenge"] = "";
+            _savedAccount["gt_user_id"] = "";
+            _savedAccount["image_token"] = "";
+            _savedAccount["seccode"] = "";
+            _savedAccount["validate"] = "";
+
             var test = DefaultRequest("/tool/sdk_login", _savedAccount, true);
             if (test == null || _shortUdid.ToLower() == "false")
             {

@@ -64,20 +64,21 @@ namespace Chika
                     { "platform", "1" },
                     { "channel_id", "1" },
                     { "viewer_id", acc["viewer_id"].AsString }
-                });
-                if (GameAccountPool.standaloneGameClientInstance == null)
-                {
-                    GameAccountPool.standaloneGameClientInstance = client;
-                    continue;
-                }
+                }, Guid.NewGuid().ToString("D"));
                 if (!client.disable)
                 {
-                    GameAccountPool.gameClientPool.Add(client);
+                    if (GameAccountPool.standaloneGameClientInstance == null)
+                    {
+                        GameAccountPool.standaloneGameClientInstance = client;
+                        continue;
+                    }
+                    else
+                        GameAccountPool.gameClientPool.Add(client);
                 }
                 if (GameAccountPool.gameClientPool.Count == 8)
                     break;
             }
-            GameAccountPool.gameClientPool = GameAccountPool.gameClientPool.Where(x => !x.disable).ToList();
+            GameAccountPool.gameClientPool = GameAccountPool.gameClientPool.ToList();
             services.AddSingleton(litedb);
             services.AddSingleton<IHostedService, RefreshService>();
         }

@@ -19,6 +19,14 @@ namespace Chika.Controllers
         {
             _ldb = db;
         }
+        [HttpGet("profile_test/{vid}")]
+        public IActionResult GetTestProfile(long vid)
+        {
+            return new ObjectResult(GameAccountPool.standaloneGameClientInstance.DefaultRequest("/profile/get_profile", new()
+            {
+                { "target_viewer_id", vid }
+            }, true));
+        }
         [HttpGet("profile/{qq}")]
         public Profile GetProfile(long qq)
         {
