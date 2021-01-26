@@ -196,8 +196,8 @@ namespace Chika.GameCore
         {
             if (_savedAccount == null && accountRequest != null)
                 _savedAccount = accountRequest;
-            var viewerId = CryptAES.DecryptRJ256Api((string)_savedAccount["viewer_id"]);
-            _savedAccount["viewer_id"] = Encoding.UTF8.GetString(CryptAES.EncryptRJ256Api(viewerId));
+            //var viewerId = CryptAES.DecryptRJ256Api((string)_savedAccount["viewer_id"]);
+            _savedAccount["viewer_id"] = "";
 
             _savedAccount["captcha_code"] = "";
             _savedAccount["captcha_type"] = "";
@@ -210,7 +210,7 @@ namespace Chika.GameCore
             var test = DefaultRequest("/tool/sdk_login", _savedAccount, true);
             if (test == null || _shortUdid.ToLower() == "false")
             {
-                Console.WriteLine("风控，取消该账号{0}\n{1}", Encoding.UTF8.GetString(viewerId), JsonConvert.SerializeObject(test));
+                Console.WriteLine("风控，取消该账号\n{0}", JsonConvert.SerializeObject(test));
                 disable = true;
             }
         }

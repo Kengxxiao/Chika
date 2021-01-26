@@ -36,8 +36,8 @@ namespace Chika
                     lst.Add(new BsonDocument
                     {
                         {"_id", (string)acc.uid },
-                        {"access_key", (string)acc.access_key },
-                        {"viewer_id", (string)acc.viewer_id }
+                        {"access_key", (string)acc.access_key }
+                        //{"viewer_id", (string)acc.viewer_id }
                     });
                 }
                 else if (fd["access_key"].AsString != (string)acc.access_key)
@@ -63,7 +63,7 @@ namespace Chika
                     { "access_key", acc["access_key"].AsString },
                     { "platform", "1" },
                     { "channel_id", "1" },
-                    { "viewer_id", acc["viewer_id"].AsString }
+                    //{ "viewer_id", acc["viewer_id"].AsString }
                 }, Guid.NewGuid().ToString("D"));
                 if (!client.disable)
                 {
