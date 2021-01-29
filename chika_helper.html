@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta charset="utf-8">
+		<title>chika_account.json构造器</title>
+		<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/js-base64@3.6.0/base64.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/aes-js@3.1.2/index.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/msgpack5@5.0.0/dist/msgpack5.min.js"></script>
+	</head>
+	<style>
+		button
+		{
+			margin: 10px 0 10px 0;
+		}
+	</style>
+	<body>
+		<h1>请在下方框中输入您从Fiddler输出的base64数据</h1>
+		<div style="display: flex; flex-direction: column;">
+			<textarea rows="15" id="encrypted"></textarea>
+			<button onclick="convert()">添加</button>
+			<button onclick="clearText()">清空</button>
+			<textarea rows="15" id="output" readonly=""></textarea>
+		</div>
+	</body>
+	<script>
+		var iv = [0x68, 0x61, 0x34, 0x6e, 0x42, 0x59, 0x41, 0x32, 0x41, 0x50, 0x55, 0x44, 0x36, 0x55, 0x76, 0x31];
+		$("#output").val("[]");
+		function convert()
+		{
+			let decrypted = Base64.toUint8Array($("#encrypted").val());
+			let key = decrypted.subarray(decrypted.length - 32, decrypted.length);
+			let dec = new aesjs.ModeOfOperation.cbc(key, iv).decrypt(decrypted.subarray(0, decrypted.length - 32));
+			dec = dec.subarray(0, dec.length - dec[dec.length - 1]);
+			let decode = msgpack5().decode(dec);
+			if (decode.uid != undefined && decode.access_key != undefined)
+			{
+			   let json = JSON.parse($("#output").val());
+			   json.push({uid: decode.uid, access_key: decode.access_key});
+			   $("#output").val(JSON.stringify(json))
+			}
+		}
+		function clearText()
+		{
+			$("#encrypted").val("");
+			$("#output").val("[]");
+		}
+	</script>
+</html>
