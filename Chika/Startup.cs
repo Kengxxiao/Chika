@@ -31,6 +31,12 @@ namespace Chika
             foreach (var acc in tmpAccountFile)
             {
                 var fd = coll.FindById((string)acc.uid);
+                if (acc.disabled != null && acc.disabled == 1)
+                {
+                    if (fd != null)
+                        coll.Delete(fd["_id"]);
+                    continue;
+                }
                 if (fd == null)
                 {
                     lst.Add(new BsonDocument
@@ -74,6 +80,10 @@ namespace Chika
                     }
                     else
                         GameAccountPool.gameClientPool.Add(client);
+                }
+                else
+                {
+                    coll.Delete(acc["_id"]);
                 }
                 if (GameAccountPool.gameClientPool.Count == 8)
                     break;

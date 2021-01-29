@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using RestSharp;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -169,6 +170,9 @@ namespace Chika.GameCore
                     _resultCode = resp["data_headers"]["result_code"];
                     while (_resultCode != 1)
                     {
+#if DEBUG
+                        File.AppendAllText(AppDomain.CurrentDomain.BaseDirectory + "chika.log", $"[{_savedAccount["uid"]}] {_resultCode}\n");
+#endif
                         Console.WriteLine("重启GameClient中...");
                         Thread.Sleep(2000);
                         RestartGameClient();
