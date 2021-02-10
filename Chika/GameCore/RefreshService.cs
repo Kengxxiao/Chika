@@ -43,6 +43,7 @@ namespace Chika.GameCore
                     //var gameUserDb = gameUser.FindAll().ToList();
                     var gameUserRecord = _ldb.GetCollection<BsonDocument>("game_user_record");
                     var gameUserVerify = _ldb.GetCollection<BsonDocument>("game_user_verify");
+                    var wechat = _ldb.GetCollection<BsonDocument>("wechat_sckey");
                     //击剑记录
                     var battleLog = _ldb.GetCollection<BsonDocument>("battle_log", BsonAutoId.Int32);
 
@@ -86,13 +87,14 @@ namespace Chika.GameCore
                                     break;
                                 }
                                 */
+                                var qq = gameUserData["_id"].AsInt64;
                                 var viewerId = gameUserData["viewer_id"].AsInt64;
                                 var profileResp = GameAccountPool.gameClientPool[(int)state].GetProfile(viewerId);
                                 if (!profileResp.SignVerify.EndsWith(gameUserVerify.FindById(viewerId)["verify"].AsString))
                                 {
                                     lock (delete)
                                     {
-                                        delete.Add(gameUserData["_id"]);
+                                        delete.Add(qq);
                                     }
                                     Console.WriteLine("[GameClient{0}] 因为签名不符合预期，删除{1}", state, viewerId);
                                     continue;
@@ -107,17 +109,16 @@ namespace Chika.GameCore
                                     {
                                         grpLst.Add(g.AsInt64);
                                     }
-                                    //lock (updateList)
-                                    //{
-                                        var chika = new ChikaUpdateData
-                                        {
-                                            qq = gameUserData["_id"].AsInt64,
-                                            arena_rank_before = profileOri["arena_rank"].AsInt32,
-                                            arena_rank_after = profileResp.Arena_rank,
-                                            grand_arena_rank_before = profileOri["grand_arena_rank"].AsInt32,
-                                            grand_arena_rank_after = profileResp.Grand_arena_rank,
-                                            groups = grpLst
-                                        };
+                                    var chika = new ChikaUpdateData
+                                    {
+                                        qq = qq,
+                                        arena_rank_before = profileOri["arena_rank"].AsInt32,
+                                        arena_rank_after = profileResp.Arena_rank,
+                                        grand_arena_rank_before = profileOri["grand_arena_rank"].AsInt32,
+                                        grand_arena_rank_after = profileResp.Grand_arena_rank,
+                                        groups = grpLst,
+                                        sckey = wechat.FindById(qq)?["sckey"].AsString ?? ""
+                                    };
                                     var req = new RestRequest("/himari_chika_api/chika_update_2", Method.POST);
                                     var updd = JsonConvert.SerializeObject(chika);
                                     req.AddParameter("", updd, ParameterType.RequestBody);
@@ -129,8 +130,6 @@ namespace Chika.GameCore
                                         battleLog.DeleteMany(x => x["viewer_id"].AsInt64 == viewerId && !tmp.Contains(x));
                                     }
                                     Thread.Sleep(500);
-                                    //Console.WriteLine("[GameClient{0}] PostHimari {1}", state, viewerId);
-                                    //}
                                     battleLog.Insert(new BsonDocument
                                     {
                                         {"viewer_id", viewerId },

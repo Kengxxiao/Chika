@@ -20,6 +20,8 @@ namespace Chika.Model
             public int grand_arena_rank_before;
             public int grand_arena_rank_after;
 
+            public string sckey;
+
             public List<long> groups;
         }
 

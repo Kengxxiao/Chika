@@ -25,9 +25,11 @@ namespace Chika
             {
                 litedb.Dispose();
             };
-            var tmpAccountFile = JsonConvert.DeserializeObject<List<dynamic>>(File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "chika_account.json"));
+            //var tmpAccountFile = JsonConvert.DeserializeObject<List<dynamic>>(File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "chika_account.json"));
+            /*
             var coll = litedb.GetCollection<BsonDocument>("game_account");
             var lst = new List<BsonDocument>();
+            //sdk_login’À∫≈≥ÿ
             foreach (var acc in tmpAccountFile)
             {
                 var fd = coll.FindById((string)acc.uid);
@@ -58,8 +60,31 @@ namespace Chika
                 lst.Clear();
             }
             tmpAccountFile = null;
+            */
             //ÃÌº”’À∫≈≥ÿ
+            var tmpAccountFileSdk = JsonConvert.DeserializeObject<List<dynamic>>(File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "chika_account_v2.json"));
             var gameVersion = "2.4.10";
+            var ydaaaFile = File.ReadAllLines(AppDomain.CurrentDomain.BaseDirectory + "ydaaa.txt");
+            BGameSDK.ydaaaUser = ydaaaFile[0];
+            BGameSDK.ydaaaKey = ydaaaFile[1];
+            foreach (var acc in tmpAccountFileSdk)
+            {
+                Console.WriteLine($"{acc.username} {acc.password}");
+                var client = new GameClient(gameVersion, (string)acc.username, (string)acc.password, Guid.NewGuid().ToString("D"));
+                if (!client.disable)
+                {
+                    if (GameAccountPool.standaloneGameClientInstance == null)
+                    {
+                        GameAccountPool.standaloneGameClientInstance = client;
+                        continue;
+                    }
+                    else
+                        GameAccountPool.gameClientPool.Add(client);
+                }
+                if (GameAccountPool.gameClientPool.Count == 8)
+                    break;
+            }
+            /*
             foreach (var acc in coll.FindAll())
             {
                 Console.WriteLine($"{acc["_id"].AsString} {acc["access_key"].AsString}");
@@ -88,6 +113,7 @@ namespace Chika
                 if (GameAccountPool.gameClientPool.Count == 8)
                     break;
             }
+            */
             GameAccountPool.gameClientPool = GameAccountPool.gameClientPool.ToList();
             services.AddSingleton(litedb);
             services.AddSingleton<IHostedService, RefreshService>();

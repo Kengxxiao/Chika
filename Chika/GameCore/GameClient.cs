@@ -28,11 +28,27 @@ namespace Chika.GameCore
         private Dictionary<string, object> _savedAccount;
         private Random rdm = new Random();
 
+        private BGameSDK bgameSdk = new BGameSDK();
+        private string bgameSdkUsername, bgameSdkPassword;
+
         public bool disable = false;
         public GameClient(string gameVersion, Dictionary<string, object> account, string udid) : this(gameVersion)
         {
             UDID = udid;
             GameLogin(account);
+            if (!disable)
+            {
+                GameStart();
+                CheckAgreement();
+            }
+        }
+
+        public GameClient(string gameVersion, string username, string password, string udid) : this(gameVersion)
+        {
+            UDID = udid;
+            bgameSdkUsername = username;
+            bgameSdkPassword = password;
+            GameLogin();
             if (!disable)
             {
                 GameStart();
@@ -198,9 +214,28 @@ namespace Chika.GameCore
         }
         public void GameLogin(Dictionary<string, object> accountRequest = null)
         {
-            if (_savedAccount == null && accountRequest != null)
-                _savedAccount = accountRequest;
-            //var viewerId = CryptAES.DecryptRJ256Api((string)_savedAccount["viewer_id"]);
+            if (!string.IsNullOrEmpty(bgameSdkUsername))
+            {
+                var game = bgameSdk.RequestBiliLogin(bgameSdkUsername, bgameSdkPassword).Result;
+                if (!game.ContainsKey("access_key"))
+                {
+                    Console.WriteLine($"账号无法登录 {bgameSdkUsername} {game["message"]}");
+                    disable = true;
+                    return;
+                }
+                _savedAccount = new Dictionary<string, object>()
+                {
+                    {"uid", $"{game["uid"]}" },
+                    {"access_key", $"{game["access_key"]}" },
+                    {"platform", "1" },
+                    {"channel_id", "1" }
+                };
+            }
+            else
+            {
+                if (_savedAccount == null && accountRequest != null)
+                    _savedAccount = accountRequest;
+            }
             _savedAccount["viewer_id"] = "";
 
             _savedAccount["captcha_code"] = "";

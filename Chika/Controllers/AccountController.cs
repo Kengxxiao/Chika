@@ -19,6 +19,24 @@ namespace Chika.Controllers
         {
             _ldb = db;
         }
+        [HttpPut("sckey/{qq}/{sckey}")]
+        public IActionResult SetSCKEY(long qq, string sckey)
+        {
+            var wechat = _ldb.GetCollection<BsonDocument>("wechat_sckey");
+            var pp = wechat.FindById(qq);
+            if (pp != null)
+            {
+                pp["sckey"] = sckey;
+                wechat.Update(pp);
+                return Ok();
+            }
+            wechat.Insert(new BsonDocument
+            {
+                {"_id", qq },
+                {"sckey", sckey }
+            });
+            return Ok();
+        }
         [HttpGet("profile_test/{vid}")]
         public IActionResult GetTestProfile(long vid)
         {
