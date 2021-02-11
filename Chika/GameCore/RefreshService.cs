@@ -29,6 +29,12 @@ namespace Chika.GameCore
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            if (GameAccountPool.gameClientPool.Count == 0)
+            {
+                Console.WriteLine("无法激活Chika，请增加账号数量\n现在你需要关闭Chika配置后重新启动");
+                Console.ReadKey();
+                return;
+            }
             var random = new Random();
             ThreadPool.SetMinThreads(GameAccountPool.gameClientPool.Count + 1, GameAccountPool.gameClientPool.Count + 1);
             var stopWatch = new Stopwatch();
@@ -55,7 +61,6 @@ namespace Chika.GameCore
                     var delete = new List<BsonValue>();
 
                     //var log = new Dictionary<string, List<long>>();
-
                     for (int i = 0; i < GameAccountPool.gameClientPool.Count; i++)
                     {
                         ThreadPool.QueueUserWorkItem((object state) =>
