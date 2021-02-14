@@ -15,11 +15,13 @@ namespace Chika.GameCore
     {
         private const string APPKEY = "fe8aac4e02f845b8ad67c427d48bfaf1";
         private RestClient biliSdkClient = new("https://line1-sdk-center-login-sh.biligame.net");
-        private RestClient ydaaaClient = new("http://api.ydaaa.com");
+        private RestClient geetstClient = new("http://api.faka168.com");
+        private RestClient himariClient = new RestClient("http://127.0.0.1:7772");
         private static MD5 md5 = MD5.Create();
 
-        public static string ydaaaUser = string.Empty;
-        public static string ydaaaKey = string.Empty;
+        public static string apiSecretKey = string.Empty;
+
+        public bool useSaved = false;
 
         private static readonly Dictionary<string, object> bgsdkParams = new()
         {
@@ -75,6 +77,11 @@ namespace Chika.GameCore
                 { "Content-Type", "application/x-www-form-urlencoded" }
             });
             biliSdkClient.ConfigureWebRequest(x => x.KeepAlive = true);
+            geetstClient.AddDefaultHeaders(new()
+            {
+                { "Content-Type", "application/x-www-form-urlencoded" }
+            });
+            geetstClient.Timeout = 20000;
         }
         private string BuildSdkReqBody(string access_key, string pwd = "", string username = "", string validate = "", string challenge = "", string gt_user_id = "")
         {
@@ -143,7 +150,7 @@ namespace Chika.GameCore
         {
             return await Request("/api/client/login", BuildSdkReqBody("", pwd, username, validate, challenge, gt_user_id));
         }
-        private async Task<Dictionary<string, object>> RequestClientStartCaptcha()
+        public async Task<Dictionary<string, object>> RequestClientStartCaptcha()
         {
             return await Request("/api/client/start_captcha", BuildSdkReqBody(""));
         }
@@ -152,6 +159,7 @@ namespace Chika.GameCore
             var ret = await RequestClientRsa();
             var rsa = new RSACryptoService("", ret["rsa_key"].ToString().Replace("-----BEGIN PUBLIC KEY-----\n", "").Replace("\n-----END PUBLIC KEY-----", ""));
             var ret2 = await RequestClientLogin(username, rsa.Encrypt(ret["hash"].ToString() + pwd));
+            int retry = 0;
             while (ret2.ContainsKey("need_captch") && !ret2.ContainsKey("access_key"))
             {
                 string challenge;
@@ -160,19 +168,37 @@ namespace Chika.GameCore
                 while (true)
                 {
                     var captcha = await RequestClientStartCaptcha();
-                    var req = new RestRequest($"/start_handle?username={ydaaaUser}&appkey={ydaaaKey}&gt={captcha["gt"]}&challenge={captcha["challenge"]}&handle_method=three_on&referer={HttpUtility.UrlEncode(Encoding.UTF8.GetBytes($"https://game.bilibili.com/sdk/geetest/?captcha_type=1&challenge={captcha["challenge"]}&gt={captcha["gt"]}&userid={captcha["gt_user_id"]}&gs=1"))}&dev_username=Kengxxiao", Method.GET);
-                    var ret3 = JsonConvert.DeserializeObject<dynamic>((await ydaaaClient.ExecuteAsync(req)).Content);
-                    var retCode = (int)ret3["code"];
-                    if (retCode == 200)
+                    challenge = (string)captcha["challenge"];
+                    gt_user_id = (string)captcha["gt_user_id"];
+                    if (retry >= 3)
                     {
-                        validate = (string)ret3["data"]["validate"];
-                        challenge = (string)captcha["challenge"];
-                        gt_user_id = (string)captcha["gt_user_id"];
+                        Console.WriteLine($"超时过多，进入手动模式\n请验证后F12抓包获取ajax.php返回的validate\nhttps://game.bilibili.com/sdk/geetest/?captcha_type={captcha["captcha_type"]}&challenge={captcha["challenge"]}&gt={captcha["gt"]}&userid={captcha["gt_user_id"]}&gs={captcha["gs"]}");
+                        validate = Console.ReadLine() ?? "";
                         break;
                     }
-                    else
+                    try
                     {
-                        Console.WriteLine($"geetest识别失败，错误信息{ret3["msg"]}");
+                        var req = new RestRequest($"/api/gateway.jsonp", Method.POST);
+                        req.AddParameter("", $"wtype=geetest&secretkey={apiSecretKey}&gt={captcha["gt"]}&challenge={captcha["challenge"]}&supporttype=3&referer={HttpUtility.UrlEncode(Encoding.UTF8.GetBytes($"https://game.bilibili.com/sdk/geetest/?captcha_type={captcha["captcha_type"]}&challenge={captcha["challenge"]}&gt={captcha["gt"]}&userid={captcha["gt_user_id"]}&gs={captcha["gs"]}"))}", ParameterType.RequestBody);
+                        var ret3 = JsonConvert.DeserializeObject<dynamic>((await geetstClient.ExecuteAsync(req)).Content);
+                        var retCode = (int)ret3["status"];
+                        if (retCode == 0)
+                        {
+                            validate = (string)ret3["data"]["validate"];
+                            Console.WriteLine("识别成功{0}", validate);
+                            break;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"gt={captcha["gt"]}\nchallenge={captcha["challenge"]}");
+                            Console.WriteLine($"geetest识别失败{ret3["reasonCode"]}，错误信息{ret3["msg"]}");
+                            retry++;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"发生异常{e.Message}，重试");
+                        retry++;
                     }
                 }
                 ret = await RequestClientRsa();

@@ -28,9 +28,8 @@ namespace Chika
             //ÃÌº”’À∫≈≥ÿ
             var tmpAccountFileSdk = JsonConvert.DeserializeObject<List<dynamic>>(File.ReadAllText(AppDomain.CurrentDomain.BaseDirectory + "chika_account_v2.json"));
             var gameVersion = "2.4.10";
-            var ydaaaFile = File.ReadAllLines(AppDomain.CurrentDomain.BaseDirectory + "ydaaa.txt");
-            BGameSDK.ydaaaUser = ydaaaFile[0];
-            BGameSDK.ydaaaKey = ydaaaFile[1];
+            var geetestFile = File.ReadAllLines(AppDomain.CurrentDomain.BaseDirectory + "geetest.txt");
+            BGameSDK.apiSecretKey = geetestFile[0];
             foreach (var acc in tmpAccountFileSdk)
             {
                 Console.WriteLine($"{acc.username} {acc.password}");
